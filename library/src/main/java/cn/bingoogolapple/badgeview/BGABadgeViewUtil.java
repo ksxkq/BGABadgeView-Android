@@ -17,11 +17,11 @@
 package cn.bingoogolapple.badgeview;
 
 import android.content.Context;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.util.TypedValue;
+import android.view.ViewGroup;
 
 /**
  * 作者:王浩 邮件:bingoogolapple@gmail.com
@@ -41,10 +41,18 @@ public class BGABadgeViewUtil {
         return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, spValue, context.getResources().getDisplayMetrics());
     }
 
-    public static int getStatusBarHeight(Context context) {
-        Resources resources = context.getResources();
-        int resourceId = resources.getIdentifier("status_bar_height", "dimen", "android");
-        return resources.getDimensionPixelSize(resourceId);
+    public static int getStatusBarHeight(ViewGroup rootView) {
+        if (rootView.getChildCount() > 2) {
+            return rootView.getChildAt(2).getHeight();
+        }
+        return 0;
+    }
+
+    public static int getNavigationBarHeight(ViewGroup rootView) {
+        if (rootView.getChildCount() > 1) {
+            return rootView.getChildAt(1).getHeight();
+        }
+        return 0;
     }
 
     public static Bitmap createBitmapSafely(BGADragBadgeView dragBadgeView, Rect rect, int retryCount) {

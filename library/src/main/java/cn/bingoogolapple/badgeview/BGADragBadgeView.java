@@ -22,14 +22,12 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.PixelFormat;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowManager;
+import android.view.ViewGroup;
 import android.view.animation.OvershootInterpolator;
 
 import com.nineoldandroids.animation.Animator;
@@ -45,8 +43,6 @@ class BGADragBadgeView extends View {
     private static final String TAG = BGADragBadgeView.class.getSimpleName();
     private BGABadgeViewHelper mBadgeViewHelper;
     private Paint mBadgePaint;
-    private WindowManager mWindowManager;
-    private WindowManager.LayoutParams mLayoutParams;
     private int mStartX;
     private int mStartY;
     private BGAExplosionAnimator mExplosionAnimator;
@@ -102,12 +98,16 @@ class BGADragBadgeView extends View {
     private boolean mDismissAble;
     private boolean mIsDragDisappear;
 
+    private ViewGroup mRootView;
+    private int mStatusBarHeight;
+    private int mNavigationBarHeight;
+    private int mRootWidth;
+    private int mRootHeight;
+
     public BGADragBadgeView(Context context, BGABadgeViewHelper badgeViewHelper) {
         super(context);
-        mWindowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         mBadgeViewHelper = badgeViewHelper;
         initBadgePaint();
-        initLayoutParams();
         initStick();
     }
 
@@ -118,16 +118,6 @@ class BGADragBadgeView extends View {
         // 设置mBadgeText居中，保证mBadgeText长度为1时，文本也能居中
         mBadgePaint.setTextAlign(Paint.Align.CENTER);
         mBadgePaint.setTextSize(mBadgeViewHelper.getBadgeTextSize());
-    }
-
-    private void initLayoutParams() {
-        mLayoutParams = new WindowManager.LayoutParams();
-        mLayoutParams.gravity = Gravity.LEFT + Gravity.TOP;
-        mLayoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        mLayoutParams.format = PixelFormat.TRANSLUCENT;
-        mLayoutParams.type = WindowManager.LayoutParams.TYPE_TOAST;
-        mLayoutParams.width = mWindowManager.getDefaultDisplay().getWidth();
-        mLayoutParams.height = mWindowManager.getDefaultDisplay().getHeight();
     }
 
     private void initStick() {
@@ -200,7 +190,7 @@ class BGADragBadgeView extends View {
 
         // 保存画布状态
         canvas.save();
-        canvas.translate(0, -BGABadgeViewUtil.getStatusBarHeight(getContext()));
+        canvas.translate(0, -mStatusBarHeight);
 
         if (!mIsDragDisappear) {
             if (!mDismissAble) {
@@ -282,7 +272,20 @@ class BGADragBadgeView extends View {
             mDismissAble = false;
             mIsDragDisappear = false;
 
-            mWindowManager.addView(this, mLayoutParams);
+            mRootView = (ViewGroup) mBadgeViewHelper.getRootView();
+
+            mStatusBarHeight = BGABadgeViewUtil.getStatusBarHeight(mRootView);
+            mNavigationBarHeight = BGABadgeViewUtil.getNavigationBarHeight(mRootView);
+
+            mRootWidth = mRootView.getWidth();
+            mRootHeight = mRootView.getHeight();
+
+            ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(mRootWidth, mRootHeight - mStatusBarHeight - mNavigationBarHeight);
+            mRootView.addView(this, layoutParams);
+            ViewGroup.MarginLayoutParams marginLayoutParams = (ViewGroup.MarginLayoutParams) this.getLayoutParams();
+            marginLayoutParams.topMargin = mStatusBarHeight;
+            setLayoutParams(marginLayoutParams);
+
             updateDragPosition(event.getRawX(), event.getRawY());
         }
     }
@@ -400,7 +403,11 @@ class BGADragBadgeView extends View {
 
     private void removeSelf() {
         if (getParent() != null) {
-            mWindowManager.removeView(this);
+            try {
+                mRootView.removeView(this);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         mExplosionAnimator = null;
         mDismissAble = false;
@@ -427,20 +434,20 @@ class BGADragBadgeView extends View {
         if (newX < 0) {
             newX = 0;
         }
-        if (newX > mWindowManager.getDefaultDisplay().getWidth() - badgeWidth) {
-            newX = mWindowManager.getDefaultDisplay().getWidth() - badgeWidth;
+        if (newX > mRootWidth - badgeWidth) {
+            newX = mRootWidth - badgeWidth;
         }
         return newX;
     }
 
     private int getNewStartY(float rawY) {
         int badgeHeight = (int) mBadgeViewHelper.getBadgeRectF().height();
-        int newY = (int) rawY - badgeHeight / 2 - BGABadgeViewUtil.getStatusBarHeight(getContext());
+        int newY = (int) rawY - badgeHeight / 2 - mStatusBarHeight;
         if (newY < 0) {
             newY = 0;
         }
-        if (newY > mWindowManager.getDefaultDisplay().getHeight() - badgeHeight) {
-            newY = mWindowManager.getDefaultDisplay().getHeight() - badgeHeight;
+        if (newY > mRootHeight - mNavigationBarHeight - mStatusBarHeight - badgeHeight) {
+            newY = mRootHeight - mNavigationBarHeight - mStatusBarHeight - badgeHeight;
         }
         return newY;
     }

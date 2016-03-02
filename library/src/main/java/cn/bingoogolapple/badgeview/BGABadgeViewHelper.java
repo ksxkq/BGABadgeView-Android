@@ -27,6 +27,7 @@ import android.graphics.RectF;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
+import android.view.View;
 
 /**
  * 作者:王浩 邮件:bingoogolapple@gmail.com
@@ -375,6 +376,10 @@ public class BGABadgeViewHelper {
 
     public void setDragDismissDelegage(BGADragDismissDelegate delegage) {
         mDelegage = delegage;
+    }
+
+    public View getRootView() {
+        return mBadgeable.getRootView();
     }
 
     public enum BadgeGravity {
